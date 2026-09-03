@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>海事船舶检查管理系统</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;background:#f0f2f5;color:#333;line-height:1.6}
+.container{max-width:1200px;margin:0 auto;padding:20px}
+header{background:linear-gradient(135deg,#1e3a5f 0%,#2c5282 100%);color:white;padding:30px;border-radius:12px;margin-bottom:24px;box-shadow:0 4px 20px rgba(30,58,95,0.3)}
+header h1{font-size:28px;margin-bottom:8px}
+header p{opacity:0.9;font-size:14px}
+.nav-tabs{display:flex;gap:12px;margin-bottom:24px;background:white;padding:12px;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.08);flex-wrap:wrap}
+.nav-tab{padding:12px 20px;border:none;background:#e2e8f0;color:#4a5568;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600;transition:all 0.3s}
+.nav-tab:hover{background:#cbd5e0}
+.nav-tab.active{background:#2c5282;color:white;box-shadow:0 2px 8px rgba(44,82,130,0.4)}
+.stats-bar{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px}
+.stat-card{background:white;padding:20px;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.08);text-align:center;border-left:4px solid #2c5282}
+.stat-card.urgent{border-left-color:#e53e3e}
+.stat-card.success{border-left-color:#38a169}
+.stat-card.info{border-left-color:#3182ce}
+.stat-card.warn{border-left-color:#dd6b20}
+.stat-number{font-size:32px;font-weight:700;color:#2c5282;margin:8px 0}
+.stat-card.urgent .stat-number{color:#e53e3e}
+.stat-card.success .stat-number{color:#38a169}
+.stat-card.warn .stat-number{color:#dd6b20}
+.stat-label{color:#718096;font-size:13px}
+.panel{background:white;border-radius:12px;padding:24px;box-shadow:0 2px 8px rgba(0,0,0,0.08);margin-bottom:20px;display:none}
+.panel.active{display:block}
+.panel h2{font-size:20px;margin-bottom:20px;color:#1e3a5f;display:flex;align-items:center;gap:8px}
+.wharf-section{margin-bottom:24px;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden}
+.wharf-header{background:#edf2f7;padding:14px 20px;font-weight:700;color:#2d3748;display:flex;justify-content:space-between;align-items:center}
+.wharf-count{background:#2c5282;color:white;padding:2px 10px;border-radius:12px;font-size:13px}
+.wharf-count.zero{background:#a0aec0}
+.ship-list{padding:12px}
+.ship-card{background:#fff;border:2px solid #e2e8f0;border-radius:10px;padding:16px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:flex-start;transition:all 0.3s}
+.ship-card:hover{border-color:#2c5282;box-shadow:0 4px 12px rgba(0,0,0,0.1)}
+.ship-card.checked{border-color:#38a169;background:#f0fff4;opacity:0.85}
+.ship-card.key-ship{border-color:#e53e3e;background:#fff5f5}
+.ship-card.key-ship.checked{border-color:#38a169;background:#f0fff4}
+.ship-card.urgent-departure{border-color:#dd6b20;background:#fffaf0}
+.ship-info{flex:1}
+.ship-info h3{font-size:18px;color:#1e3a5f;margin-bottom:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.ship-meta{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:#4a5568;margin-bottom:4px}
+.ship-meta span{display:flex;align-items:center;gap:4px}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:600}
+.badge-pending{background:#fed7d7;color:#c53030}
+.badge-done{background:#c6f6d5;color:#22543d}
+.badge-time{background:#bee3f8;color:#2a4365}
+.badge-key{background:#fc8181;color:#742a2a}
+.badge-liner{background:#d6f5d6;color:#276749}
+.badge-crew{background:#b2f5ea;color:#234e52}
+.badge-urgent{background:#fbd38d;color:#744210}
+.badge-exempt{background:#e2e8f0;color:#4a5568}
+.key-reasons{margin-top:6px;font-size:12px;color:#c53030;line-height:1.8}
+.key-reasons span{display:inline-block;background:#fed7d7;padding:1px 6px;border-radius:4px;margin-right:6px;margin-bottom:2px}
+.history-hint{margin-top:6px;padding:8px 12px;background:#fffff0;border:1px solid #f6e05e;border-radius:6px;font-size:13px;color:#744210}
+.history-hint .history-list{margin-top:4px;padding-left:16px}
+.history-hint .history-list li{margin-bottom:2px;font-size:12px}
+.history-hint.exempt{background:#e6fffa;border-color:#38b2ac;color:#234e52}
+.urgent-departure-banner{margin-top:6px;padding:6px 12px;background:#fff5f5;border:1px solid #fc8181;border-radius:6px;font-size:13px;color:#c53030;font-weight:600;display:flex;align-items:center;gap:6px}
+.btn{padding:10px 20px;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600;transition:all 0.2s;white-space:nowrap}
+.btn-check{background:#2c5282;color:white}
+.btn-check:hover{background:#1e3a5f}
+.btn-checked{background:#38a169;color:white}
+.btn-checked:hover{background:#2f855a}
+.btn-danger{background:#e53e3e;color:white}
+.btn-secondary{background:#718096;color:white}
+.btn-edit{background:#ed8936;color:white}
+.btn-edit:hover{background:#dd6b20}
+.btn-sm{padding:6px 14px;font-size:13px}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px}
+.form-group label{display:block;margin-bottom:6px;font-weight:600;color:#4a5568;font-size:14px}
+.form-group input,.form-group select,.form-group textarea{width:100%;padding:10px 14px;border:2px solid #e2e8f0;border-radius:8px;font-size:15px;transition:border-color 0.2s}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{outline:none;border-color:#2c5282}
+.form-group textarea{resize:vertical;min-height:80px}
+.checkbox-group{display:flex;flex-direction:column;gap:10px}
+.checkbox-item{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border:2px solid #e2e8f0;border-radius:8px;cursor:pointer;transition:all 0.2s}
+.checkbox-item:hover{border-color:#fc8181;background:#fff5f5}
+.checkbox-item input[type="checkbox"]{width:18px;height:18px;margin-top:2px;accent-color:#e53e3e;cursor:pointer}
+.checkbox-item label{margin:0;font-weight:500;cursor:pointer;flex:1;font-size:14px;line-height:1.5}
+.checkbox-item.checked{border-color:#e53e3e;background:#fff5f5}
+.file-upload-area{border:2px dashed #cbd5e0;border-radius:10px;padding:24px;text-align:center;cursor:pointer;transition:all 0.2s;background:#f7fafc}
+.file-upload-area:hover{border-color:#2c5282;background:#ebf8ff}
+.file-upload-area.has-file{border-color:#38a169;background:#f0fff4}
+.file-upload-area input[type="file"]{display:none}
+.file-upload-icon{font-size:32px;margin-bottom:8px}
+.file-upload-text{color:#4a5568;font-size:14px}
+.file-upload-hint{color:#a0aec0;font-size:12px;margin-top:4px}
+.file-name{color:#2c5282;font-weight:600;margin-top:8px;word-break:break-all}
+.filter-bar{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap}
+.filter-bar input,.filter-bar select{padding:8px 14px;border:2px solid #e2e8f0;border-radius:8px;font-size:14px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:12px;text-align:left;border-bottom:1px solid #e2e8f0}
+th{background:#edf2f7;font-weight:700;color:#4a5568;position:sticky;top:0}
+tr:hover{background:#f7fafc}
+.empty-state{text-align:center;padding:60px 20px;color:#a0aec0}
+.empty-state svg{width:80px;height:80px;margin-bottom:16px;opacity:0.5}
+.action-bar{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap}
+.modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;justify-content:center;align-items:center;overflow-y:auto;padding:20px}
+.modal-overlay.active{display:flex}
+.modal{background:white;border-radius:16px;padding:32px;max-width:600px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.3);max-height:90vh;overflow-y:auto}
+.modal.wide{max-width:900px}
+.modal h3{margin-bottom:16px;color:#1e3a5f}
+.modal p{margin-bottom:24px;color:#4a5568}
+.modal-actions{display:flex;gap:12px;justify-content:flex-end;margin-top:20px}
+.check-time{font-size:12px;color:#38a169;margin-top:4px}
+.section-title{font-size:16px;font-weight:700;color:#1e3a5f;margin:24px 0 12px 0;padding-bottom:8px;border-bottom:2px solid #e2e8f0}
+.crew-file-info{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:12px}
+.crew-file-info a{color:#2c5282;text-decoration:underline;cursor:pointer}
+.card-actions{display:flex;flex-direction:column;gap:6px}
+.history-table{max-height:500px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:8px}
+.history-table table{font-size:13px}
+.history-table th,.history-table td{padding:8px 10px}
+.history-table th{background:#f7fafc;font-size:12px}
+.history-table tr:hover{background:#edf2f7}
+.btn-add{background:#38a169;color:white}
+.btn-add:hover{background:#2f855a}
+.pagination{display:flex;gap:8px;justify-content:center;margin-top:16px;align-items:center}
+.pagination button{padding:6px 12px;border:1px solid #e2e8f0;background:white;border-radius:6px;cursor:pointer;font-size:13px}
+.pagination button:hover{background:#edf2f7}
+.pagination button:disabled{opacity:0.5;cursor:not-allowed}
+.pagination span{font-size:13px;color:#4a5568}
+.upload-area{border:2px dashed #cbd5e0;border-radius:10px;padding:32px;text-align:center;cursor:pointer;transition:all 0.2s;background:#f7fafc;margin-bottom:16px}
+.upload-area:hover{border-color:#38a169;background:#f0fff4}
+.upload-area.dragover{border-color:#2c5282;background:#ebf8ff}
+.upload-icon{font-size:40px;margin-bottom:8px}
+.upload-text{color:#4a5568;font-size:16px;font-weight:600}
+.upload-hint{color:#a0aec0;font-size:13px;margin-top:4px}
+@media (max-width:768px){.ship-card{flex-direction:column;align-items:flex-start;gap:12px}.nav-tabs{overflow-x:auto}.stats-bar{grid-template-columns:1fr}.card-actions{flex-direction:row;flex-wrap:wrap}.modal.wide{width:95%;padding:16px}}
+</style>
+<base target="_blank">
+</head>
+<body>
+<div class="container">
+<header><h1>⚓ 海事船舶检查管理系统</h1><p>辖区码头海轮到港检查任务管理 | 90天豁免 · 重点必查 · 历史检查提醒 · 船员名单管理</p></header>
+
+<div class="stats-bar">
+<div class="stat-card info"><div class="stat-label">今日到港</div><div class="stat-number" id="stat-today">0</div><div class="stat-label">艘次</div></div>
+<div class="stat-card urgent"><div class="stat-label">待检查</div><div class="stat-number" id="stat-pending">0</div><div class="stat-label">艘次</div></div>
+<div class="stat-card warn"><div class="stat-label">无需检查</div><div class="stat-number" id="stat-exempt">0</div><div class="stat-label">艘次</div></div>
+<div class="stat-card success"><div class="stat-label">已完成</div><div class="stat-number" id="stat-done">0</div><div class="stat-label">艘次</div></div>
+</div>
+
+<div class="nav-tabs">
+<button class="nav-tab active" onclick="showPanel('today')">📋 今日待查</button>
+<button class="nav-tab" onclick="showPanel('all')">📊 全部船舶</button>
+<button class="nav-tab" onclick="showPanel('add')">➕ 录入船舶</button>
+<button class="nav-tab" onclick="showPanel('history')">📋 台账管理</button>
+</div>
+
+<div class="panel active" id="panel-today">
+<h2>今日检查任务 <span id="today-date" style="font-size:14px;color:#718096;font-weight:normal;"></span></h2>
+<div id="today-content">
+<div class="empty-state">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+<p>今日暂无到港船舶</p>
+</div>
+</div>
+</div>
+
+<div class="panel" id="panel-all">
+<h2>全部船舶记录</h2>
+<div class="filter-bar">
+<input type="text" id="search-input" placeholder="搜索船名..." oninput="renderAllShips()">
+<select id="filter-wharf" onchange="renderAllShips()"><option value="">全部码头</option><option value="海力码头">海力码头</option><option value="沙电码头">沙电码头</option><option value="宏泰码头">宏泰码头</option><option value="越洋码头">越洋码头</option><option value="中东码头">中东码头</option></select>
+<select id="filter-status" onchange="renderAllShips()"><option value="">全部状态</option><option value="pending">待检查</option><option value="done">已完成</option><option value="exempt">无需检查</option></select>
+<select id="filter-key" onchange="renderAllShips()"><option value="">全部船舶</option><option value="key">仅重点船舶</option><option value="normal">仅普通船舶</option></select>
+<input type="date" id="filter-date" onchange="renderAllShips()">
+<button class="btn btn-secondary btn-sm" onclick="exportData()">📥 导出数据</button>
+<button class="btn btn-secondary btn-sm" onclick="document.getElementById('import-file').click()">📤 导入数据</button>
+<input type="file" id="import-file" style="display:none" accept=".json" onchange="importData(this)">
+</div>
+<div style="overflow-x:auto;">
+<table>
+<thead><tr><th>船名</th><th>到港时间</th><th>离港时间</th><th>码头</th><th>代理</th><th>类型</th><th>重点</th><th>船员名单</th><th>历史检查</th><th>状态</th><th>检查时间</th><th>备注</th><th>操作</th></tr></thead>
+<tbody id="all-ships-table"></tbody>
+</table>
+</div>
+</div>
+
+<div class="panel" id="panel-add">
+<h2 id="form-title">录入新到港船舶</h2>
+<form id="ship-form" onsubmit="addShip(event)">
+<input type="hidden" id="edit-ship-id" value="">
+<div class="section-title">📋 基本信息</div>
+<div class="form-grid">
+<div class="form-group"><label>船名 *</label><input type="text" id="ship-name" required placeholder="请输入船名" onblur="checkShipHistory()"><div id="history-hint" style="display:none;"></div></div>
+<div class="form-group"><label>到港日期 *</label><input type="date" id="ship-date" required></div>
+<div class="form-group"><label>到港时间 *</label><input type="time" id="ship-time" required></div>
+<div class="form-group"><label>离港日期</label><input type="date" id="ship-departure-date"></div>
+<div class="form-group"><label>离港时间</label><input type="time" id="ship-departure-time"></div>
+<div class="form-group"><label>停靠码头 *</label><select id="ship-wharf" required><option value="">请选择</option><option value="海力码头">海力码头</option><option value="沙电码头">沙电码头</option><option value="宏泰码头">宏泰码头</option><option value="越洋码头">越洋码头</option><option value="中东码头">中东码头</option></select></div>
+<div class="form-group"><label>船方代理 *</label><input type="text" id="ship-agent" required placeholder="代理公司/联系人"></div>
+<div class="form-group"><label>船舶类型</label><select id="ship-type"><option value="海轮">海轮（常规检查）</option><option value="班轮">班轮（常规豁免，但重点船仍需检查）</option></select></div>
+</div>
+
+<div class="section-title">🚨 重点船舶判定</div>
+<div class="form-grid" style="grid-template-columns:1fr;">
+<div class="form-group">
+<div class="checkbox-group">
+<div class="checkbox-item" onclick="toggleCheckbox(this,'key1')"><input type="checkbox" id="key1" onchange="updateCheckboxStyle(this)"><label for="key1">1. 所有抵港外国籍船舶</label></div>
+<div class="checkbox-item" onclick="toggleCheckbox(this,'key2')"><input type="checkbox" id="key2" onchange="updateCheckboxStyle(this);toggleCrewChangeDate(this)"><label for="key2">2. 三个月内更换过甲板部高级船员</label></div>
+<div id="crew-change-date-group" style="display:none;margin-left:28px;margin-top:8px;">
+<div class="form-group" style="max-width:300px;">
+<label style="color:#c53030;font-size:13px;">上次更换船员日期 *</label>
+<input type="date" id="crew-change-date" style="border-color:#fc8181;">
+<p style="font-size:12px;color:#718096;margin-top:4px;">请填写该船上次更换甲板部高级船员的具体日期，系统将据此判断是否需要检查</p>
+</div>
+</div>
+<div class="checkbox-item" onclick="toggleCheckbox(this,'key3')"><input type="checkbox" id="key3" onchange="updateCheckboxStyle(this)"><label for="key3">3. 本港准备更换甲板部高级船员</label></div>
+<div class="checkbox-item" onclick="toggleCheckbox(this,'key4')"><input type="checkbox" id="key4" onchange="updateCheckboxStyle(this)"><label for="key4">4. 一年内发生过商渔船碰撞事故公司所属的</label></div>
+<div class="checkbox-item" onclick="toggleCheckbox(this,'key5')"><input type="checkbox" id="key5" onchange="updateCheckboxStyle(this)"><label for="key5">5. 未按中国沿海航路航行的中国籍海船</label></div>
+</div>
+</div>
+</div>
+
+<div class="section-title">👥 船员名单上传</div>
+<div class="form-grid" style="grid-template-columns:1fr;">
+<div class="form-group">
+<div class="file-upload-area" id="crew-upload-area" onclick="document.getElementById('crew-file').click()">
+<input type="file" id="crew-file" accept=".xlsx,.xls,.pdf,.doc,.docx,.png,.jpg,.jpeg" onchange="handleCrewFile(this)">
+<div class="file-upload-icon">📎</div>
+<div class="file-upload-text" id="crew-upload-text">点击上传船员名单</div>
+<div class="file-upload-hint">支持 Excel、PDF、Word、图片格式</div>
+<div class="file-name" id="crew-file-name"></div>
+</div>
+</div>
+</div>
+
+<div class="section-title">📝 其他信息</div>
+<div class="form-grid">
+<div class="form-group" style="grid-column:1/-1;"><label>备注</label><textarea id="ship-remark" placeholder="特殊事项、货物信息、船员情况等..."></textarea></div>
+</div>
+
+<div class="action-bar">
+<button type="submit" class="btn btn-check" id="submit-btn">💾 保存并录入</button>
+<button type="button" class="btn btn-secondary" onclick="cancelEdit()">取消</button>
+</div>
+</form>
+</div>
+
+<div class="panel" id="panel-history">
+<h2>📋 锦丰处历史检查台账管理</h2>
+<p style="color:#718096;font-size:14px;margin-bottom:16px;">当前仅保留锦丰处台账数据。支持上传新的Excel文件自动替换台账。</p>
+
+<div class="upload-area" id="excel-upload-area" ondragover="event.preventDefault();this.classList.add('dragover');" ondragleave="this.classList.remove('dragover');" ondrop="handleExcelDrop(event)">
+<div class="upload-icon">📊</div>
+<div class="upload-text">拖拽Excel文件到此处，或点击上传</div>
+<div class="upload-hint">支持 .xlsx 格式，将自动解析并替换现有台账</div>
+<input type="file" id="excel-upload" style="display:none" accept=".xlsx" onchange="handleExcelUpload(this)">
+</div>
+
+<div class="filter-bar">
+<input type="text" id="history-search" placeholder="搜索船名..." oninput="renderHistoryPanel()">
+<button class="btn btn-add btn-sm" onclick="showAddHistoryModal()">➕ 添加记录</button>
+<button class="btn btn-secondary btn-sm" onclick="resetHistoryToDefault()">🔄 恢复默认台账</button>
+</div>
+<div class="history-table">
+<table>
+<thead><tr><th>船名</th><th>检查日期</th><th>检查人员</th><th>存在问题</th><th>备注</th><th>操作</th></tr></thead>
+<tbody id="history-table-body"></tbody>
+</table>
+</div>
+<div class="pagination" id="history-pagination"></div>
+</div>
+
+</div>
+
+<div class="modal-overlay" id="modal">
+<div class="modal" id="modal-content">
+<h3 id="modal-title">确认操作</h3>
+<div id="modal-body"><p id="modal-text">确定要执行此操作吗？</p></div>
+<div class="modal-actions" id="modal-actions">
+<button class="btn btn-secondary" onclick="closeModal()">取消</button>
+<button class="btn btn-check" id="modal-confirm" onclick="">确定</button>
+</div>
+</div>
+</div>
+
+<script>
+
+const STORAGE_KEY='msa_ship_inspection_data_v6';
+const HISTORY_STORAGE_KEY='msa_excel_history_v6';
+let ships=[],currentCrewFile=null,editingShipId=null;
+const WHARFS=['海力码头','沙电码头','宏泰码头','越洋码头','中东码头'];
+const KEY_REASONS={'key1':'外国籍船舶','key2':'三个月内更换船员','key3':'本港准备更换船员','key4':'商渔船碰撞事故公司','key5':'未按沿海航路航行'};
+
+// 嵌入的锦丰处默认台账数据
+const DEFAULT_EXCEL_HISTORY={"满胜": [{"shipName": "满胜", "checkTime": "2026.8.12", "source": "锦丰处", "wharf": "", "shipType": "1（按上述1-5类别填序号即可）", "imo": "9132674", "inspectors": "XX,XX", "issues": "是（具体信息请录入动态执法系统，船员履职问题需包含船员姓名、职务，适任证书编号，船员管理公司，外派机构）", "remark": ""}], "顺畅和鑫": [{"shipName": "顺畅和鑫", "checkTime": "2026.8.14", "source": "锦丰处", "wharf": "", "shipType": "5", "imo": "", "inspectors": "段圣新、李林洁", "issues": "无", "remark": ""}, {"shipName": "顺畅和鑫", "checkTime": "2026.8.15", "source": "锦丰处", "wharf": "", "shipType": "5", "imo": "", "inspectors": "李章、杨志强", "issues": "无", "remark": ""}], "东洋1号": [{"shipName": "东洋1号", "checkTime": "2026.8.14", "source": "锦丰处", "wharf": "", "shipType": "1", "imo": "9982665", "inspectors": "段圣新、李林洁", "issues": "无", "remark": ""}], "江海直达13": [{"shipName": "江海直达13", "checkTime": "2026.8.14", "source": "锦丰处", "wharf": "", "shipType": "5", "imo": "", "inspectors": "段圣新、李林洁", "issues": "无", "remark": ""}, {"shipName": "江海直达13", "checkTime": "2026.8.20", "source": "锦丰处", "wharf": "", "shipType": "5", "imo": "", "inspectors": "曹玄郁、王争炜", "issues": "有", "remark": ""}], "宏泰568": [{"shipName": "宏泰568", "checkTime": "2026.8.14", "source": "锦丰处", "wharf": "", "shipType": "5", "imo": "", "inspectors": "李章、李宗帅", "issues": "无", "remark": ""}, {"shipName": "宏泰568", "checkTime": "2026.8.19", "source": "锦丰处", "wharf": "", "shipType": "5", "imo": "", "inspectors": "曹玄郁、王争炜", "issues": "无", "remark": ""}, {"shipName": "宏泰568", "checkTime": "2026.8.22", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "李章、吕弼贤", "issues": "无", "remark": "班轮，8月19日已检查，检查后船员未更换。"}, {"shipName": "宏泰568", "checkTime": "2026.8.24", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "崔瑞南、施晓东", "issues": "无", "remark": ""}], "瑞宁7": [{"shipName": "瑞宁7", "checkTime": "2026.8.14", "source": "锦丰处", "wharf": "", "shipType": "5", "imo": "", "inspectors": "李章、李宗帅", "issues": "无", "remark": ""}], "融海启航": [{"shipName": "融海启航", "checkTime": "2026.8.14", "source": "锦丰处", "wharf": "", "shipType": "5", "imo": "", "inspectors": "李章、李宗帅", "issues": "无", "remark": ""}], "建兴72": [{"shipName": "建兴72", "checkTime": "2026.8.14", "source": "锦丰处", "wharf": "", "shipType": "5", "imo": "", "inspectors": "李章、李宗帅", "issues": "无", "remark": ""}, {"shipName": "建兴72", "checkTime": "2026.8.31", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "/", "issues": "无", "remark": ""}], "荣耀": [{"shipName": "荣耀", "checkTime": "2026.8.14", "source": "锦丰处", "wharf": "", "shipType": "1", "imo": "9397250", "inspectors": "杨志强、辛建昊", "issues": "无", "remark": ""}], "克罗": [{"shipName": "克罗", "checkTime": "2026.8.14", "source": "锦丰处", "wharf": "", "shipType": "1", "imo": "9781700", "inspectors": "段圣新、李林洁", "issues": "无", "remark": ""}], "博之远": [{"shipName": "博之远", "checkTime": "2026.8.15", "source": "锦丰处", "wharf": "", "shipType": "5", "imo": "", "inspectors": "李章、杨志强", "issues": "有", "remark": ""}], "华盛156": [{"shipName": "华盛156", "checkTime": "2026.8.15", "source": "锦丰处", "wharf": "", "shipType": "5", "imo": "", "inspectors": "李章、杨志强", "issues": "无", "remark": ""}], "长春门": [{"shipName": "长春门", "checkTime": "2026.8.16", "source": "锦丰处", "wharf": "", "shipType": "5", "imo": "", "inspectors": "李章、杨志强", "issues": "无", "remark": ""}, {"shipName": "长春门", "checkTime": "2026.9.1", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "/", "issues": "无", "remark": ""}], "MV WINNING WORLD": [{"shipName": "MV WINNING WORLD", "checkTime": "2026.816", "source": "锦丰处", "wharf": "", "shipType": "1", "imo": "", "inspectors": "李章、杨志强", "issues": "无", "remark": ""}], "DS ACHIEVE": [{"shipName": "DS ACHIEVE", "checkTime": "2026.8.16", "source": "锦丰处", "wharf": "", "shipType": "1", "imo": "1128275", "inspectors": "李章、杨志强", "issues": "无", "remark": ""}], "华强兴旺": [{"shipName": "华强兴旺", "checkTime": "2026.8.17", "source": "锦丰处", "wharf": "", "shipType": "5", "imo": "", "inspectors": "段圣新、李林洁", "issues": "无", "remark": ""}], "航旭鑫海": [{"shipName": "航旭鑫海", "checkTime": "2026.817", "source": "锦丰处", "wharf": "", "shipType": "5", "imo": "", "inspectors": "李章、李宗帅", "issues": "无", "remark": ""}], "ASL OTSL 1": [{"shipName": "ASL OTSL 1", "checkTime": "2026.8.17", "source": "锦丰处", "wharf": "", "shipType": "1", "imo": "9624251", "inspectors": "段圣新、李林洁", "issues": "无", "remark": ""}], "有毅发展": [{"shipName": "有毅发展", "checkTime": "2026.8.17", "source": "锦丰处", "wharf": "", "shipType": "5", "imo": "", "inspectors": "李章、李宗帅", "issues": "无", "remark": ""}], "金鹏66": [{"shipName": "金鹏66", "checkTime": "2026.8.17", "source": "锦丰处", "wharf": "", "shipType": "5", "imo": "", "inspectors": "崔瑞南、梅建辉", "issues": "无", "remark": ""}], "潮安58": [{"shipName": "潮安58", "checkTime": "2026.8.17", "source": "锦丰处", "wharf": "", "shipType": "5", "imo": "", "inspectors": "崔瑞南、梅建辉", "issues": "无", "remark": ""}, {"shipName": "潮安58", "checkTime": "2026.8.25", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "崔瑞南、施晓东", "issues": "无", "remark": ""}], "长航威海": [{"shipName": "长航威海", "checkTime": "2026.8.17", "source": "锦丰处", "wharf": "", "shipType": "5", "imo": "", "inspectors": "段圣新、李林洁", "issues": "无", "remark": ""}, {"shipName": "长航威海", "checkTime": "2026.8.24", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "段圣新、李林洁", "issues": "无", "remark": ""}], "永泰达33": [{"shipName": "永泰达33", "checkTime": "2026.8.17", "source": "锦丰处", "wharf": "", "shipType": "5", "imo": "", "inspectors": "李艳伟、葛荣晖", "issues": "无", "remark": ""}, {"shipName": "永泰达33", "checkTime": "2026.8.18", "source": "锦丰处", "wharf": "", "shipType": "5", "imo": "", "inspectors": "崔瑞南、梅建辉", "issues": "无", "remark": ""}, {"shipName": "永泰达33", "checkTime": "2026.8.29", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "崔瑞南、施晓东", "issues": "无", "remark": ""}], "庆丰68": [{"shipName": "庆丰68", "checkTime": "2026.8.17", "source": "锦丰处", "wharf": "", "shipType": "5", "imo": "", "inspectors": "李艳伟、葛荣晖", "issues": "无", "remark": ""}, {"shipName": "庆丰68", "checkTime": "2026.8.31", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "/", "issues": "无", "remark": ""}], "恩宏": [{"shipName": "恩宏", "checkTime": "2026.8.17", "source": "锦丰处", "wharf": "", "shipType": "5", "imo": "", "inspectors": "段圣新、李林洁", "issues": "无", "remark": ""}], "海阳185": [{"shipName": "海阳185", "checkTime": "2026.8.17", "source": "锦丰处", "wharf": "", "shipType": "5", "imo": "", "inspectors": "李章、李宗帅", "issues": "无", "remark": ""}], "京润56": [{"shipName": "京润56", "checkTime": "2026.8.17", "source": "锦丰处", "wharf": "", "shipType": "5", "imo": "", "inspectors": "崔瑞南、梅建辉", "issues": "无", "remark": ""}, {"shipName": "京润56", "checkTime": "2026.8.30", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "/", "issues": "无", "remark": "班轮，8月17日已检查，检查后船员未更换。"}], "荣海88": [{"shipName": "荣海88", "checkTime": "2026.8.17", "source": "锦丰处", "wharf": "", "shipType": "5", "imo": "", "inspectors": "段圣新、李林洁", "issues": "无", "remark": ""}], "卓航21": [{"shipName": "卓航21", "checkTime": "2026.8.17", "source": "锦丰处", "wharf": "", "shipType": "5", "imo": "", "inspectors": "段圣新、李林洁", "issues": "无", "remark": ""}, {"shipName": "卓航21", "checkTime": "2026.8.27", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "/", "issues": "无", "remark": "班轮，8月17日已检查，检查后船员未更换。"}], "东昊9": [{"shipName": "东昊9", "checkTime": "2026.8.17", "source": "锦丰处", "wharf": "", "shipType": "5", "imo": "", "inspectors": "李章、李宗帅", "issues": "无", "remark": ""}, {"shipName": "东昊9", "checkTime": "2026.8.25", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "代纪青、李林洁", "issues": "无", "remark": ""}], "鼎衡30": [{"shipName": "鼎衡30", "checkTime": "2026.8.18", "source": "锦丰处", "wharf": "", "shipType": "5", "imo": "", "inspectors": "李章、李宗帅", "issues": "无", "remark": ""}], "JIA LONG": [{"shipName": "JIA LONG", "checkTime": "2026.8.18", "source": "锦丰处", "wharf": "", "shipType": "1", "imo": "9625487", "inspectors": "段圣新、李林洁", "issues": "无", "remark": ""}], "锦华59": [{"shipName": "锦华59", "checkTime": "2026.8.18", "source": "锦丰处", "wharf": "", "shipType": "5", "imo": "", "inspectors": "崔瑞南、梅建辉", "issues": "无", "remark": ""}], "浙定59360": [{"shipName": "浙定59360", "checkTime": "2026.8.18", "source": "锦丰处", "wharf": "", "shipType": "5", "imo": "", "inspectors": "崔瑞南、梅建辉", "issues": "无", "remark": ""}, {"shipName": "浙定59360", "checkTime": "2026.8.18", "source": "锦丰处", "wharf": "", "shipType": "5", "imo": "", "inspectors": "崔瑞南、梅建辉", "issues": "无", "remark": ""}, {"shipName": "浙定59360", "checkTime": "2026.8.19", "source": "锦丰处", "wharf": "", "shipType": "5", "imo": "", "inspectors": "李艳伟、葛荣晖", "issues": "无", "remark": ""}], "华江2": [{"shipName": "华江2", "checkTime": "2026.8.18", "source": "锦丰处", "wharf": "", "shipType": "5", "imo": "", "inspectors": "李章、李宗帅", "issues": "无", "remark": ""}], "中矿616": [{"shipName": "中矿616", "checkTime": "2026.8.18", "source": "锦丰处", "wharf": "", "shipType": "5", "imo": "", "inspectors": "李艳伟、葛荣晖", "issues": "无", "remark": ""}, {"shipName": "中矿616", "checkTime": "2026.8.30", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "/", "issues": "无", "remark": "班轮，8月18日已检查，检查后船员未更换。"}], "长恒海": [{"shipName": "长恒海", "checkTime": "2026.8.18", "source": "锦丰处", "wharf": "", "shipType": "5", "imo": "", "inspectors": "李章、李宗帅", "issues": "无", "remark": ""}, {"shipName": "长恒海", "checkTime": "2026.8.24", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "段圣新、李林洁", "issues": "无", "remark": ""}], "中汇20": [{"shipName": "中汇20", "checkTime": "2026.8.18", "source": "锦丰处", "wharf": "", "shipType": "5", "imo": "", "inspectors": "段圣新、李林洁", "issues": "无", "remark": ""}, {"shipName": "中汇20", "checkTime": "2026.8.24", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "段圣新、李林洁", "issues": "无", "remark": ""}], "PEACEFUL WORLD": [{"shipName": "PEACEFUL WORLD", "checkTime": "2026.8.18", "source": "锦丰处", "wharf": "", "shipType": "1", "imo": "1080605", "inspectors": "曹玄郁、王争炜", "issues": "无", "remark": ""}], "MINERVA PROVIDENCE": [{"shipName": "MINERVA PROVIDENCE", "checkTime": "2026.8.18", "source": "锦丰处", "wharf": "", "shipType": "1", "imo": "9461257", "inspectors": "曹玄郁、王争炜", "issues": "无", "remark": ""}], "宁兴18": [{"shipName": "宁兴18", "checkTime": "2026.8.18", "source": "锦丰处", "wharf": "", "shipType": "5", "imo": "", "inspectors": "曹玄郁、王争炜", "issues": "无", "remark": ""}], "DYNAWAY BRAVER": [{"shipName": "DYNAWAY BRAVER", "checkTime": "2026.8.18", "source": "锦丰处", "wharf": "", "shipType": "1", "imo": "1131088", "inspectors": "曹玄郁、王争炜", "issues": "无", "remark": ""}], "安达168": [{"shipName": "安达168", "checkTime": "2026.8.19", "source": "锦丰处", "wharf": "", "shipType": "5", "imo": "", "inspectors": "崔瑞南，李林洁", "issues": "无", "remark": ""}, {"shipName": "安达168", "checkTime": "2026.8.26", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "崔瑞南、施晓东", "issues": "无", "remark": ""}], "泽悦": [{"shipName": "泽悦", "checkTime": "2026.8.19", "source": "锦丰处", "wharf": "", "shipType": "5", "imo": "", "inspectors": "曹玄郁、王争炜", "issues": "无", "remark": ""}], "汇源89": [{"shipName": "汇源89", "checkTime": "2026.8.19", "source": "锦丰处", "wharf": "", "shipType": "5", "imo": "", "inspectors": "曹玄郁、王争炜", "issues": "无", "remark": ""}], "金虹111": [{"shipName": "金虹111", "checkTime": "2026.8.19", "source": "锦丰处", "wharf": "", "shipType": "5", "imo": "", "inspectors": "李艳伟、葛荣晖", "issues": "无", "remark": ""}, {"shipName": "金虹111", "checkTime": "2026.8.27", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "马洪林、葛荣晖", "issues": "无", "remark": ""}], "辽海7": [{"shipName": "辽海7", "checkTime": "2026.8.19", "source": "锦丰处", "wharf": "", "shipType": "5", "imo": "", "inspectors": "李艳伟、葛荣晖", "issues": "无", "remark": ""}], "远大98": [{"shipName": "远大98", "checkTime": "2026.8.19", "source": "锦丰处", "wharf": "", "shipType": "5", "imo": "", "inspectors": "李艳伟、葛荣晖", "issues": "无", "remark": ""}], "长荣门": [{"shipName": "长荣门", "checkTime": "2026.8.19", "source": "锦丰处", "wharf": "", "shipType": "5", "imo": "", "inspectors": "李章、李宗帅", "issues": "无", "remark": ""}], "BUNUN JUSTICE": [{"shipName": "BUNUN JUSTICE", "checkTime": "2026.8.19", "source": "锦丰处", "wharf": "", "shipType": "1", "imo": "9732448", "inspectors": "段圣新、李林洁", "issues": "无", "remark": ""}], "禾盛02": [{"shipName": "禾盛02", "checkTime": "2026.8.19", "source": "锦丰处", "wharf": "", "shipType": "5", "imo": "", "inspectors": "李章、李宗帅", "issues": "无", "remark": ""}], "九旭128": [{"shipName": "九旭128", "checkTime": "2026.8.19", "source": "锦丰处", "wharf": "", "shipType": "5", "imo": "", "inspectors": "段圣新、李林洁", "issues": "无", "remark": ""}, {"shipName": "九旭128", "checkTime": "2026.8.27", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "李章、李宗帅", "issues": "无", "remark": ""}], "金旭168": [{"shipName": "金旭168", "checkTime": "2026.8.19", "source": "锦丰处", "wharf": "", "shipType": "5", "imo": "", "inspectors": "崔瑞南、梅建辉", "issues": "无", "remark": ""}], "和泰通5": [{"shipName": "和泰通5", "checkTime": "2026.8.19", "source": "锦丰处", "wharf": "", "shipType": "5", "imo": "", "inspectors": "李章、李宗帅", "issues": "无", "remark": ""}, {"shipName": "和泰通5", "checkTime": "2026.8.27", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "/", "issues": "无", "remark": "班轮，8月19日已检查，检查后船员未更换。"}], "舟池23": [{"shipName": "舟池23", "checkTime": "2026.8.19", "source": "锦丰处", "wharf": "", "shipType": "5", "imo": "", "inspectors": "崔瑞南、梅建辉", "issues": "无", "remark": ""}], "GH FITZGERALD": [{"shipName": "GH FITZGERALD", "checkTime": "2026.8.19", "source": "锦丰处", "wharf": "", "shipType": "1", "imo": "9558218", "inspectors": "段圣新、李林洁", "issues": "无", "remark": ""}], "恒泰洋": [{"shipName": "恒泰洋", "checkTime": "2026.8.19", "source": "锦丰处", "wharf": "", "shipType": "5", "imo": "", "inspectors": "李章、李宗帅", "issues": "无", "remark": ""}], "中汇22": [{"shipName": "中汇22", "checkTime": "2026.8.19", "source": "锦丰处", "wharf": "", "shipType": "5", "imo": "", "inspectors": "段圣新、李林洁", "issues": "无", "remark": ""}, {"shipName": "中汇22", "checkTime": "2026.8.27", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "李章、李宗帅", "issues": "无", "remark": ""}], "友信": [{"shipName": "友信", "checkTime": "2026.8.19", "source": "锦丰处", "wharf": "", "shipType": "5", "imo": "", "inspectors": "段圣新、李林洁", "issues": "无", "remark": ""}], "飞益海": [{"shipName": "飞益海", "checkTime": "2026.8.19", "source": "锦丰处", "wharf": "", "shipType": "5", "imo": "", "inspectors": "段圣新、李林洁", "issues": "无", "remark": ""}], "向帆": [{"shipName": "向帆", "checkTime": "2026.8.20", "source": "锦丰处", "wharf": "", "shipType": "5", "imo": "", "inspectors": "曹玄郁、王争炜", "issues": "有", "remark": ""}], "LADY WYNN": [{"shipName": "LADY WYNN", "checkTime": "2026.8.20", "source": "锦丰处", "wharf": "", "shipType": "1", "imo": "9861794", "inspectors": "曹玄郁、王争炜", "issues": "无", "remark": ""}], "新兴达16": [{"shipName": "新兴达16", "checkTime": "2026.8.20", "source": "锦丰处", "wharf": "", "shipType": "5", "imo": "", "inspectors": "李艳伟、葛荣晖", "issues": "无", "remark": ""}], "捷邦66": [{"shipName": "捷邦66", "checkTime": "2026.8.20", "source": "锦丰处", "wharf": "", "shipType": "5", "imo": "", "inspectors": "李艳伟、葛荣晖", "issues": "无", "remark": ""}, {"shipName": "捷邦66", "checkTime": "2026.9.1", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "/", "issues": "无", "remark": ""}], "HEBEI CHALLENGER": [{"shipName": "HEBEI CHALLENGER", "checkTime": "2026.8.20", "source": "锦丰处", "wharf": "", "shipType": "5", "imo": "", "inspectors": "李章、李宗帅", "issues": "无", "remark": ""}], "恒荣安海": [{"shipName": "恒荣安海", "checkTime": "2026.8.20", "source": "锦丰处", "wharf": "", "shipType": "5", "imo": "", "inspectors": "吕弼贤、李林洁", "issues": "无", "remark": ""}, {"shipName": "恒荣安海", "checkTime": "2026.9.1", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "/", "issues": "无", "remark": ""}], "恺舟1": [{"shipName": "恺舟1", "checkTime": "2026.8.20", "source": "锦丰处", "wharf": "", "shipType": "5", "imo": "", "inspectors": "吕弼贤、李林洁", "issues": "无", "remark": ""}], "华江10": [{"shipName": "华江10", "checkTime": "2026.8.20", "source": "锦丰处", "wharf": "", "shipType": "5", "imo": "", "inspectors": "李章、李宗帅", "issues": "无", "remark": ""}], "HG SUAPE": [{"shipName": "HG SUAPE", "checkTime": "2026.8.20", "source": "锦丰处", "wharf": "", "shipType": "1", "imo": "1129011", "inspectors": "吕弼贤、李林洁", "issues": "无", "remark": ""}], "XIANG HAN 8": [{"shipName": "XIANG HAN 8", "checkTime": "2026.8.21", "source": "锦丰处", "wharf": "", "shipType": "无", "imo": "9575371", "inspectors": "李章、李林洁", "issues": "无", "remark": ""}], "新顺祥": [{"shipName": "新顺祥", "checkTime": "2026.8.21", "source": "锦丰处", "wharf": "", "shipType": "5", "imo": "", "inspectors": "李章、李宗帅", "issues": "无", "remark": ""}], "兴蔚蓝": [{"shipName": "兴蔚蓝", "checkTime": "2026.8.21", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "李艳伟、葛荣晖", "issues": "无", "remark": ""}], "金虹678": [{"shipName": "金虹678", "checkTime": "2026.8.21", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "曹玄郁、王争炜", "issues": "无", "remark": ""}], "海洲运1": [{"shipName": "海洲运1", "checkTime": "2026.8.21", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "李章、李宗帅", "issues": "无", "remark": ""}], "天宇89": [{"shipName": "天宇89", "checkTime": "2026.8.21", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "李艳伟、葛荣晖", "issues": "无", "remark": ""}], "世纪永荣": [{"shipName": "世纪永荣", "checkTime": "2026.8.21", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "李章、李宗帅", "issues": "无", "remark": ""}, {"shipName": "世纪永荣", "checkTime": "2026.8.30", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "/", "issues": "无", "remark": "班轮，8月21日已检查，检查后船员未更换。"}], "同庆18": [{"shipName": "同庆18", "checkTime": "2026.8.21", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "曹玄郁、王争炜", "issues": "无", "remark": ""}], "舟顺达": [{"shipName": "舟顺达", "checkTime": "2026.8.21", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "李艳伟、葛荣晖", "issues": "无", "remark": ""}], "华海602": [{"shipName": "华海602", "checkTime": "2026.8.21", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "曹玄郁、王争炜", "issues": "无", "remark": ""}], "MINERAL EESTI": [{"shipName": "MINERAL EESTI", "checkTime": "2026.8.21", "source": "锦丰处", "wharf": "", "shipType": "1", "imo": "9989534", "inspectors": "段圣新、吕弼贤", "issues": "无", "remark": ""}], "文峰16": [{"shipName": "文峰16", "checkTime": "2026.8.21", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "李章、李宗帅", "issues": "无", "remark": ""}, {"shipName": "文峰16", "checkTime": "2026.8.27", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "/", "issues": "无", "remark": "班轮，8月21日已检查，检查后船员未更换。"}], "MANDARIN CHINA": [{"shipName": "MANDARIN CHINA", "checkTime": "2026.8.21", "source": "锦丰处", "wharf": "", "shipType": "1", "imo": "9569243", "inspectors": "段圣新、吕弼贤", "issues": "无", "remark": ""}], "江洲海2": [{"shipName": "江洲海2", "checkTime": "2026.8.22", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "崔瑞南、梅建辉", "issues": "无", "remark": ""}], "宏泰858": [{"shipName": "宏泰858", "checkTime": "2026.8.22", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "李章、吕弼贤", "issues": "无", "remark": ""}], "长龙35": [{"shipName": "长龙35", "checkTime": "2026.8.22", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "李章、吕弼贤", "issues": "无", "remark": ""}], "振海17": [{"shipName": "振海17", "checkTime": "2026.8.22", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "崔瑞南、梅建辉", "issues": "无", "remark": ""}, {"shipName": "振海17", "checkTime": "2026.8.30", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "/", "issues": "无", "remark": "班轮，8月22日已检查，检查后船员未更换。"}], "恒荣江海": [{"shipName": "恒荣江海", "checkTime": "2026.8.22", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "李章、吕弼贤", "issues": "无", "remark": ""}], "DING HENG45": [{"shipName": "DING HENG45", "checkTime": "2026.8.23", "source": "锦丰处", "wharf": "", "shipType": "1", "imo": "9330795", "inspectors": "王争炜、李艳伟", "issues": "无", "remark": ""}], "RICHEBOURG": [{"shipName": "RICHEBOURG", "checkTime": "2026.8.23", "source": "锦丰处", "wharf": "", "shipType": "1", "imo": "1111820", "inspectors": "崔瑞南、段圣新", "issues": "无", "remark": ""}], "澳海19": [{"shipName": "澳海19", "checkTime": "2026.8.23", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "王争炜、李艳伟", "issues": "无", "remark": ""}], "恒荣兴海": [{"shipName": "恒荣兴海", "checkTime": "2026.8.23", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "崔瑞南、段圣新", "issues": "无", "remark": ""}], "宏泰 268": [{"shipName": "宏泰 268", "checkTime": "2026.8.23", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "崔瑞南、段圣新", "issues": "无", "remark": ""}], "浙定58508": [{"shipName": "浙定58508", "checkTime": "2026.8.24", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "崔瑞南、施晓东", "issues": "无", "remark": ""}], "新安6": [{"shipName": "新安6", "checkTime": "2026.8.24", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "崔瑞南、施晓东", "issues": "无", "remark": ""}], "ZHEN HAO 7": [{"shipName": "ZHEN HAO 7", "checkTime": "2026.8.24", "source": "锦丰处", "wharf": "", "shipType": "1", "imo": "9587001", "inspectors": "李章、李宗帅", "issues": "无", "remark": ""}], "博康88": [{"shipName": "博康88", "checkTime": "2026.8.24", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "马洪林、葛荣晖", "issues": "无", "remark": ""}], "BADGER ISLAND": [{"shipName": "BADGER ISLAND", "checkTime": "2026.8.24", "source": "锦丰处", "wharf": "", "shipType": "1", "imo": "9578294", "inspectors": "杨志强、辛建昊", "issues": "无", "remark": ""}], "PATRIA NAWASENA 1": [{"shipName": "PATRIA NAWASENA 1", "checkTime": "2026.8.24", "source": "锦丰处", "wharf": "", "shipType": "1", "imo": "9339466", "inspectors": "杨志强、辛建昊", "issues": "无", "remark": ""}], "MARATHOS": [{"shipName": "MARATHOS", "checkTime": "2026.8.24", "source": "锦丰处", "wharf": "", "shipType": "1", "imo": "9512056", "inspectors": "杨志强、辛建昊", "issues": "无", "remark": ""}], "华海达3": [{"shipName": "华海达3", "checkTime": "2026.8.24", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "李章、李宗帅", "issues": "无", "remark": ""}], "宏昌7": [{"shipName": "宏昌7", "checkTime": "2026.8.24", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "李章、李宗帅", "issues": "无", "remark": ""}], "新福星": [{"shipName": "新福星", "checkTime": "2026.8.24", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "段圣新、李林洁", "issues": "无", "remark": ""}], "伊康星89": [{"shipName": "伊康星89", "checkTime": "2026.8.24", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "李章、李宗帅", "issues": "无", "remark": ""}], "宇星": [{"shipName": "宇星", "checkTime": "2026.8.24", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "段圣新、李林洁", "issues": "无", "remark": ""}], "荣宁132": [{"shipName": "荣宁132", "checkTime": "2026.8.24", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "崔瑞南、施晓东", "issues": "无", "remark": ""}], "浙海1123": [{"shipName": "浙海1123", "checkTime": "2026.8.25", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "崔瑞南、施晓东", "issues": "无", "remark": ""}], "STAR SYDNEY": [{"shipName": "STAR SYDNEY", "checkTime": "2026.8.25", "source": "锦丰处", "wharf": "", "shipType": "1", "imo": "9699373", "inspectors": "陈海东、李章", "issues": "无", "remark": ""}], "NASCO GEM": [{"shipName": "NASCO GEM", "checkTime": "2026.8.25", "source": "锦丰处", "wharf": "", "shipType": "1", "imo": "9404986", "inspectors": "代纪青、李林洁", "issues": "无", "remark": ""}], "恒荣盛海": [{"shipName": "恒荣盛海", "checkTime": "2026.8.25", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "陈海东、李章", "issues": "无", "remark": ""}], "TITANSHIP": [{"shipName": "TITANSHIP", "checkTime": "2026.8.25", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "代纪青、李林洁", "issues": "无", "remark": ""}], "江海直达81": [{"shipName": "江海直达81", "checkTime": "2026.8.25", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "代纪青、李林洁", "issues": "无", "remark": ""}], "富仕达8": [{"shipName": "富仕达8", "checkTime": "2026.8.25", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "崔瑞南、施晓东", "issues": "无", "remark": ""}], "广州发展3": [{"shipName": "广州发展3", "checkTime": "2026.8.25", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "陈海东、李章", "issues": "无", "remark": ""}], "HIROYOU": [{"shipName": "HIROYOU", "checkTime": "2026.8.25", "source": "锦丰处", "wharf": "", "shipType": "1", "imo": "9542219", "inspectors": "代纪青、李林洁", "issues": "无", "remark": ""}], "启程9": [{"shipName": "启程9", "checkTime": "2026.8.26", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "段圣新、吕弼贤", "issues": "无", "remark": ""}], "骏鑫888": [{"shipName": "骏鑫888", "checkTime": "2026.8.26", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "崔瑞南、施晓东", "issues": "无", "remark": ""}], "潮安178": [{"shipName": "潮安178", "checkTime": "2026.8.26", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "崔瑞南、施晓东", "issues": "无", "remark": ""}], "旭辉之星": [{"shipName": "旭辉之星", "checkTime": "2026.8.26", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "李章、李宗帅", "issues": "无", "remark": ""}], "DS EXPRESS 178": [{"shipName": "DS EXPRESS 178", "checkTime": "2026.8.26", "source": "锦丰处", "wharf": "", "shipType": "1", "imo": "8357887", "inspectors": "李章、李宗帅", "issues": "无", "remark": ""}], "长福海": [{"shipName": "长福海", "checkTime": "2026.8.26", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "李章、李宗帅", "issues": "无", "remark": ""}], "鹏宇": [{"shipName": "鹏宇", "checkTime": "2026.8.26", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "李章、李宗帅", "issues": "无", "remark": ""}], "淳星": [{"shipName": "淳星", "checkTime": "2026.8.26", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "段圣新、吕弼贤", "issues": "无", "remark": ""}], "长辉嘉盛": [{"shipName": "长辉嘉盛", "checkTime": "2026.8.27", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "李章、李宗帅", "issues": "无", "remark": ""}], "永星13": [{"shipName": "永星13", "checkTime": "2026.8.27", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "杨志强、辛建昊", "issues": "无", "remark": ""}], "江海直达108": [{"shipName": "江海直达108", "checkTime": "2026.8.27", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "李章、李宗帅", "issues": "无", "remark": ""}], "HERO": [{"shipName": "HERO", "checkTime": "2026.8.27", "source": "锦丰处", "wharf": "", "shipType": "1", "imo": "9446867", "inspectors": "杨志强，辛建昊", "issues": "无", "remark": ""}], "吉祥兴": [{"shipName": "吉祥兴", "checkTime": "2026.8.28", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "崔瑞南、施晓东", "issues": "无", "remark": ""}], "安裕山": [{"shipName": "安裕山", "checkTime": "2026.8.29", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "李章、施晓东", "issues": "无", "remark": ""}], "丰祺鸿运": [{"shipName": "丰祺鸿运", "checkTime": "2026.8.29", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "李章、施晓东", "issues": "无", "remark": ""}], "骏鑫88": [{"shipName": "骏鑫88", "checkTime": "2026.8.29", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "陈海东、施晓东", "issues": "无", "remark": ""}], "弘亿88": [{"shipName": "弘亿88", "checkTime": "2026.8.30", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "杨志强、张浩", "issues": "无", "remark": ""}], "金恒海": [{"shipName": "金恒海", "checkTime": "2026.8.30", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "杨志强、张浩", "issues": "无", "remark": ""}], "恩洁5": [{"shipName": "恩洁5", "checkTime": "2026.8.30", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "杨志强、张浩", "issues": "无", "remark": ""}], "锦华99": [{"shipName": "锦华99", "checkTime": "2026.8.30", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "杨志强、张浩", "issues": "无", "remark": ""}], "MOUNT LHOTSE": [{"shipName": "MOUNT LHOTSE", "checkTime": "2026.8.31", "source": "锦丰处", "wharf": "", "shipType": "1", "imo": "1033573", "inspectors": "陈海东、李林洁", "issues": "无", "remark": ""}], "宏伟19": [{"shipName": "宏伟19", "checkTime": "2026.8.31", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "李章、李宗帅", "issues": "无", "remark": ""}], "兴宁85": [{"shipName": "兴宁85", "checkTime": "2026.8.31", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "李章、李宗帅", "issues": "无", "remark": ""}], "中航海": [{"shipName": "中航海", "checkTime": "2026.8.31", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "陈海东、李林洁", "issues": "无", "remark": ""}], "XIN HAI JIA": [{"shipName": "XIN HAI JIA", "checkTime": "2026.8.31", "source": "锦丰处", "wharf": "", "shipType": "1", "imo": "9467859", "inspectors": "李章、李宗帅", "issues": "无", "remark": ""}], "宏伟18": [{"shipName": "宏伟18", "checkTime": "2026.8.31", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "陈海东、李林洁", "issues": "无", "remark": ""}], "太行158": [{"shipName": "太行158", "checkTime": "2026.8.31", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "李章、李宗帅", "issues": "无", "remark": ""}], "MAGSENGER 11": [{"shipName": "MAGSENGER 11", "checkTime": "2026.8.31", "source": "锦丰处", "wharf": "", "shipType": "1", "imo": "9497270", "inspectors": "陈海东、李林洁", "issues": "无", "remark": ""}], "浙定45326": [{"shipName": "浙定45326", "checkTime": "2026.8.31", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "崔瑞南，施晓东", "issues": "无", "remark": ""}], "华泓17": [{"shipName": "华泓17", "checkTime": "2026.9.1", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "李宗帅、李林洁", "issues": "无", "remark": ""}], "ORANGE TIGER": [{"shipName": "ORANGE TIGER", "checkTime": "2026.9.1", "source": "锦丰处", "wharf": "", "shipType": "1", "imo": "9446611", "inspectors": "段圣新、李章", "issues": "无", "remark": ""}], "潮安518": [{"shipName": "潮安518", "checkTime": "2026.9.1", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "崔瑞南，梅建辉", "issues": "无", "remark": ""}], "江海直达86": [{"shipName": "江海直达86", "checkTime": "2026.9.1", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "杨志强、辛建昊", "issues": "无", "remark": ""}], "宏泰268": [{"shipName": "宏泰268", "checkTime": "2026.9.1", "source": "锦丰处", "wharf": "", "shipType": "3", "imo": "", "inspectors": "杨志强、辛建昊", "issues": "无", "remark": ""}]};
+
+// 加载台账数据
+function loadHistoryData(){
+let data=localStorage.getItem(HISTORY_STORAGE_KEY);
+if(data){return JSON.parse(data);}
+localStorage.setItem(HISTORY_STORAGE_KEY,JSON.stringify(DEFAULT_EXCEL_HISTORY));
+return DEFAULT_EXCEL_HISTORY;
+}
+let EXCEL_HISTORY=loadHistoryData();
+
+function saveHistoryData(){
+localStorage.setItem(HISTORY_STORAGE_KEY,JSON.stringify(EXCEL_HISTORY));
+}
+
+function resetHistoryToDefault(){
+if(confirm('确定要恢复默认锦丰处台账数据吗？所有自定义修改将丢失！')){
+EXCEL_HISTORY=JSON.parse(JSON.stringify(DEFAULT_EXCEL_HISTORY));
+saveHistoryData();
+renderHistoryPanel();
+alert('✅ 已恢复默认台账数据');
+}
+}
+
+function init(){
+loadData();
+document.getElementById('today-date').textContent=formatDate(new Date());
+document.getElementById('ship-date').value=new Date().toISOString().split('T')[0];
+document.getElementById('ship-time').value=new Date().toTimeString().slice(0,5);
+renderToday();
+renderAllShips();
+updateStats();
+}
+
+function loadData(){
+try{const data=localStorage.getItem(STORAGE_KEY);if(data)ships=JSON.parse(data);}
+catch(e){ships=[];}
+}
+
+function saveData(){localStorage.setItem(STORAGE_KEY,JSON.stringify(ships));updateStats();}
+
+// 解析Excel日期字符串
+function parseExcelDate(str){
+if(!str)return null;
+const m=str.match(/(\d{4})\.(\d{1,2})\.(\d{1,2})/);
+if(!m)return null;
+return new Date(parseInt(m[1]),parseInt(m[2])-1,parseInt(m[3]));
+}
+
+// 获取船舶最近一次实际检查日期（Excel台账 + 本系统已检查记录）
+function getLastCheckDate(shipName){
+let lastDate=null;
+// Excel台账
+const excelRecords=EXCEL_HISTORY[shipName]||[];
+for(const r of excelRecords){
+const d=parseExcelDate(r.checkTime);
+if(d&&(!lastDate||d>lastDate))lastDate=d;
+}
+// 本系统实际检查记录（不含豁免）
+const sysRecords=ships.filter(s=>s.name===shipName&&s.checked&&s.checkTime);
+for(const r of sysRecords){
+const d=new Date(r.checkTime);
+if(d&&(!lastDate||d>lastDate))lastDate=d;
+}
+return lastDate;
+}
+
+// 判断是否需要检查（核心逻辑）
+function needsInspection(ship){
+// 1. 班轮豁免（但重点船仍需检查）
+if(ship.shipType==='班轮'&&!ship.keyShip)return false;
+
+// 2. 判断是否为必查的重点船
+let isKeyShip=false;
+if(ship.keyShipReasons){
+// key1/key3/key4/key5 勾选即必查
+if(ship.keyShipReasons.includes('外国籍船舶')||ship.keyShipReasons.includes('本港准备更换船员')||ship.keyShipReasons.includes('商渔船碰撞事故公司')||ship.keyShipReasons.includes('未按沿海航路航行')){
+isKeyShip=true;
+}
+// key2 需要判断更换日期
+if(ship.keyShipReasons.includes('三个月内更换船员')&&ship.crewChangeDate){
+const lastCheck=getLastCheckDate(ship.name);
+const changeDate=new Date(ship.crewChangeDate);
+if(lastCheck){
+// 更换日期 > 检查日期 → 上次查完又换了 → 需要检查
+// 更换日期 <= 检查日期 → 更换在检查之前 → 无需检查（同天默认更换在前）
+if(changeDate>lastCheck)isKeyShip=true;
+}else{
+// 没有历史检查记录，但勾了key2 → 需要检查
+isKeyShip=true;
+}
+}
+}
+if(isKeyShip)return true;
+
+// 3. 90天内检查过 → 豁免
+const lastCheck=getLastCheckDate(ship.name);
+if(lastCheck){
+const daysDiff=(new Date(ship.arrivalDate)-lastCheck)/(1000*60*60*24);
+if(daysDiff<=90)return false;
+}
+
+return true;
+}
+
+function isUrgentDeparture(ship){
+if(!ship.departureDate)return false;
+const now=new Date();
+const dep=new Date(ship.departureDate+'T'+(ship.departureTime||'00:00'));
+const diffHours=(dep-now)/(1000*60*60);
+return diffHours>0&&diffHours<=12&&!ship.checked&&!ship.exempted;
+}
+
+// 统计：今日到港总数、待检查、无需检查（豁免）、已完成
+function updateStats(){
+const today=new Date().toISOString().split('T')[0];
+const todayShips=ships.filter(s=>s.arrivalDate===today);
+const needCheck=todayShips.filter(s=>needsInspection(s));
+const exempt=todayShips.filter(s=>!needsInspection(s));
+const pending=needCheck.filter(s=>!s.checked).length;
+const done=needCheck.filter(s=>s.checked).length;
+
+document.getElementById('stat-today').textContent=todayShips.length;
+document.getElementById('stat-pending').textContent=pending;
+document.getElementById('stat-exempt').textContent=exempt.length;
+document.getElementById('stat-done').textContent=done;
+}
+
+function showPanel(name){
+document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+document.getElementById('panel-'+name).classList.add('active');
+event.target.classList.add('active');
+if(name==='today')renderToday();
+if(name==='all')renderAllShips();
+if(name==='history')renderHistoryPanel();
+}
+
+// ========== 历史检查记录查询（录入时） ==========
+function checkShipHistory(){
+const name=document.getElementById('ship-name').value.trim();
+const hintDiv=document.getElementById('history-hint');
+if(!name){hintDiv.style.display='none';hintDiv.innerHTML='';return;}
+
+let html='';
+const lastCheck=getLastCheckDate(name);
+
+// Excel台账历史
+const excelRecords=EXCEL_HISTORY[name]||[];
+if(excelRecords.length>0){
+html+=`<div class="history-hint"><strong>📋 锦丰处台账历史检查记录（${excelRecords.length}次）：</strong><ul class="history-list">`;
+excelRecords.slice(-3).forEach(r=>{
+html+=`<li>${r.checkTime} · ${r.inspectors||''}${r.issues&&r.issues!=='无'&&r.issues!=='/'?' · 存在问题':''}</li>`;
+});
+html+=`</ul></div>`;
+}
+
+// 本系统历史
+const sysHistory=ships.filter(s=>s.name===name&&s.checked&&s.checkTime).sort((a,b)=>new Date(b.checkTime)-new Date(a.checkTime));
+if(sysHistory.length>0){
+const lastSys=sysHistory[0];
+const checkDate=new Date(lastSys.checkTime);
+const dateStr=`${checkDate.getMonth()+1}月${checkDate.getDate()}日`;
+html+=`<div class="history-hint"><strong>💻 本系统历史检查记录（${sysHistory.length}次）：</strong><ul class="history-list"><li>最近检查：${dateStr}</li></ul></div>`;
+}
+
+// 90天豁免提示
+if(lastCheck){
+const arrivalDate=document.getElementById('ship-date').value||new Date().toISOString().split('T')[0];
+const daysDiff=(new Date(arrivalDate)-lastCheck)/(1000*60*60*24);
+if(daysDiff<=90){
+const lastStr=`${lastCheck.getMonth()+1}月${lastCheck.getDate()}日`;
+html+=`<div class="history-hint exempt"><strong>✅ 90天豁免提示：</strong>该船最近一次检查为 <strong>${lastStr}</strong>，距今 ${Math.floor(daysDiff)} 天。如本次未在本港更换甲板部高级船员，且三个月内更换船员时间在检查日期之前，可豁免本次检查。</div>`;
+}
+}
+
+if(html){hintDiv.innerHTML=html;hintDiv.style.display='block';}
+else{hintDiv.style.display='none';hintDiv.innerHTML='';}
+}
+
+// ========== 今日待查渲染 ==========
+function renderToday(){
+const today=new Date().toISOString().split('T')[0];
+const todayShips=ships.filter(s=>s.arrivalDate===today&&needsInspection(s)).sort((a,b)=>{
+const aUrgent=isUrgentDeparture(a)?0:1;const bUrgent=isUrgentDeparture(b)?0:1;
+if(aUrgent!==bUrgent)return aUrgent-bUrgent;
+return a.arrivalTime.localeCompare(b.arrivalTime);
+});
+
+const container=document.getElementById('today-content');
+if(todayShips.length===0){
+container.innerHTML=`<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg><p>🎉 今日暂无需要检查的到港船舶！</p></div>`;
+return;
+}
+
+let html='';
+WHARFS.forEach(wharf=>{
+const wharfShips=todayShips.filter(s=>s.wharf===wharf);
+if(wharfShips.length===0)return;
+const pendingCount=wharfShips.filter(s=>!s.checked).length;
+const keyCount=wharfShips.filter(s=>s.keyShip&&!s.checked).length;
+const urgentCount=wharfShips.filter(s=>isUrgentDeparture(s)).length;
+html+=`<div class="wharf-section"><div class="wharf-header"><span>📍 ${wharf}</span><span>${urgentCount>0?`<span class="badge badge-urgent" style="margin-right:6px;">⚠️ ${urgentCount}艘即将离港</span>`:''}${keyCount>0?`<span class="badge badge-key" style="margin-right:6px;">重点 ${keyCount}</span>`:''}<span class="wharf-count ${pendingCount===0?'zero':''}">待查 ${pendingCount} 艘</span></span></div><div class="ship-list">${wharfShips.map(ship=>renderShipCard(ship)).join('')}</div></div>`;
+});
+
+const otherShips=todayShips.filter(s=>!WHARFS.includes(s.wharf));
+if(otherShips.length>0){html+=`<div class="wharf-section"><div class="wharf-header"><span>📍 其他码头</span><span class="wharf-count">${otherShips.filter(s=>!s.checked).length} 艘待查</span></div><div class="ship-list">${otherShips.map(ship=>renderShipCard(ship)).join('')}</div></div>`;}
+container.innerHTML=html;
+}
+
+function renderShipCard(ship){
+const isKey=ship.keyShip,isLiner=ship.shipType==='班轮',isUrgent=isUrgentDeparture(ship);
+const keyReasonsHtml=isKey&&ship.keyShipReasons?`<div class="key-reasons">🚨 重点原因：${ship.keyShipReasons.map(r=>`<span>${r}</span>`).join('')}</div>`:'';
+const historyHtml=getShipHistoryHtml(ship.name,ship.id);
+const crewHtml=ship.crewFile?`<div class="crew-file-info">📎 <a onclick="downloadCrewFile('${ship.id}')">${ship.crewFile.name}</a></div>`:'';
+const urgentHtml=isUrgent?`<div class="urgent-departure-banner">⚠️ 该船离港时间不足12小时，请优先安排检查！</div>`:'';
+
+return `<div class="ship-card ${ship.checked?'checked':''} ${isKey?'key-ship':''} ${isUrgent?'urgent-departure':''}"><div class="ship-info"><h3>${ship.name}${isKey?'<span class="badge badge-key">🔴 重点必查</span>':''}${isLiner?'<span class="badge badge-liner">班轮</span>':''}${ship.crewFile?'<span class="badge badge-crew">👥 船员名单</span>':''}${isUrgent?'<span class="badge badge-urgent">⏰ 即将离港</span>':''}</h3><div class="ship-meta"><span>🕐 到港 <span class="badge badge-time">${ship.arrivalTime}</span></span>${ship.departureDate?`<span>🕐 离港 <span class="badge badge-time">${ship.departureDate} ${ship.departureTime||''}</span></span>`:''}<span>🏢 ${ship.agent}</span><span class="badge ${ship.checked?'badge-done':'badge-pending'}">${ship.checked?'✅ 已检查':'⏳ 待检查'}</span></div>${keyReasonsHtml}${urgentHtml}${historyHtml}${crewHtml}${ship.checked?`<div class="check-time">✓ 检查于 ${ship.checkTime||''} ${ship.checker?'by '+ship.checker:''}</div>`:''}${ship.remark?`<div style="margin-top:6px;font-size:12px;color:#718096;">📝 ${ship.remark}</div>`:''}</div><div class="card-actions">${ship.checked?`<button class="btn btn-checked btn-sm" onclick="uncheckShip('${ship.id}')">↩️ 撤销</button>`:`<button class="btn btn-check btn-sm" onclick="checkShip('${ship.id}')">✓ 确认检查</button>`}<button class="btn btn-edit btn-sm" onclick="editShip('${ship.id}')">✏️ 编辑</button></div></div>`;
+}
+
+function getShipHistoryHtml(name,currentId){
+let html='';
+const excelRecords=(EXCEL_HISTORY[name]||[]).slice(-3);
+if(excelRecords.length>0){html+=`<div class="history-hint"><strong>📋 台账历史：</strong><ul class="history-list">`;excelRecords.forEach(r=>{html+=`<li>${r.checkTime}</li>`;});html+=`</ul></div>`;}
+const sysHistory=ships.filter(s=>s.name===name&&s.checked&&s.checkTime&&s.id!==currentId).sort((a,b)=>new Date(b.checkTime)-new Date(a.checkTime)).slice(0,1);
+if(sysHistory.length>0){const checkDate=new Date(sysHistory[0].checkTime);html+=`<div class="history-hint">💻 本系统曾于 <strong>${checkDate.getMonth()+1}月${checkDate.getDate()}日</strong> 检查过该船</div>`;}
+return html;
+}
+
+function getShipHistoryText(name,currentId){
+let parts=[];
+const lastCheck=getLastCheckDate(name);
+if(lastCheck){parts.push(`最近:${lastCheck.getMonth()+1}月${lastCheck.getDate()}日`);}
+const excelCount=(EXCEL_HISTORY[name]||[]).length;
+const sysCount=ships.filter(s=>s.name===name&&s.checked&&s.checkTime&&s.id!==currentId).length;
+if(excelCount>0||sysCount>0){parts.push(`共${excelCount+sysCount}次`);}
+return parts.length>0?parts.join(' '):'-';
+}
+
+// ========== 全部船舶渲染 ==========
+function renderAllShips(){
+const search=document.getElementById('search-input').value.toLowerCase();
+const wharfFilter=document.getElementById('filter-wharf').value;
+const statusFilter=document.getElementById('filter-status').value;
+const keyFilter=document.getElementById('filter-key').value;
+const dateFilter=document.getElementById('filter-date').value;
+
+let filtered=ships.sort((a,b)=>(b.arrivalDate+'T'+b.arrivalTime).localeCompare(a.arrivalDate+'T'+a.arrivalTime));
+if(search)filtered=filtered.filter(s=>s.name.toLowerCase().includes(search));
+if(wharfFilter)filtered=filtered.filter(s=>s.wharf===wharfFilter);
+if(statusFilter){
+if(statusFilter==='pending')filtered=filtered.filter(s=>!s.checked&&!s.exempted);
+else if(statusFilter==='done')filtered=filtered.filter(s=>s.checked);
+else if(statusFilter==='exempt')filtered=filtered.filter(s=>s.exempted);
+}
+if(keyFilter)filtered=filtered.filter(s=>keyFilter==='key'?s.keyShip:!s.keyShip);
+if(dateFilter)filtered=filtered.filter(s=>s.arrivalDate===dateFilter);
+
+const tbody=document.getElementById('all-ships-table');
+if(filtered.length===0){tbody.innerHTML='<tr><td colspan="13" style="text-align:center;color:#a0aec0;padding:40px;">暂无符合条件的记录</td></tr>';return;}
+
+tbody.innerHTML=filtered.map(ship=>{
+let statusBadge,statusText;
+if(ship.exempted){statusBadge='badge-exempt';statusText='🟡 无需检查';}
+else if(ship.checked){statusBadge='badge-done';statusText='✅ 已完成';}
+else{statusBadge='badge-pending';statusText='⏳ 待检查';}
+
+return `<tr><td><strong>${ship.name}</strong></td><td>${ship.arrivalDate} ${ship.arrivalTime}</td><td>${ship.departureDate?ship.departureDate+' '+(ship.departureTime||''):'-'}</td><td>${ship.wharf}</td><td>${ship.agent}</td><td>${ship.shipType}</td><td>${ship.keyShip?'<span class="badge badge-key">重点</span>':'-'}</td><td>${ship.crewFile?`<a onclick="downloadCrewFile('${ship.id}')" style="color:#2c5282;cursor:pointer;text-decoration:underline;">${ship.crewFile.name}</a>`:'-'}</td><td>${getShipHistoryText(ship.name,ship.id)}</td><td><span class="badge ${statusBadge}">${statusText}</span></td><td>${ship.checkTime||'-'}</td><td>${ship.remark||'-'}</td><td>${ship.checked?`<button class="btn btn-secondary btn-sm" onclick="uncheckShip('${ship.id}')">撤销</button>`:`<button class="btn btn-check btn-sm" onclick="checkShip('${ship.id}')">检查</button>`}<button class="btn btn-edit btn-sm" onclick="editShip('${ship.id}')">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteShip('${ship.id}')">删除</button></td></tr>`;
+}).join('');
+}
+
+function toggleCheckbox(el,checkboxId){const cb=document.getElementById(checkboxId);if(event.target!==cb){cb.checked=!cb.checked;updateCheckboxStyle(cb);if(checkboxId==='key2')toggleCrewChangeDate(cb);}}
+function toggleCrewChangeDate(cb){
+const group=document.getElementById('crew-change-date-group');
+if(cb.checked){group.style.display='block';}
+else{group.style.display='none';document.getElementById('crew-change-date').value='';}
+}
+function updateCheckboxStyle(cb){const item=cb.closest('.checkbox-item');if(cb.checked)item.classList.add('checked');else item.classList.remove('checked');}
+function clearKeyCheckboxes(){['key1','key2','key3','key4','key5'].forEach(id=>{const cb=document.getElementById(id);cb.checked=false;updateCheckboxStyle(cb);});}
+
+function handleCrewFile(input){
+const file=input.files[0];if(!file)return;
+if(file.size>5*1024*1024){alert('❌ 文件大小超过5MB限制');input.value='';return;}
+const reader=new FileReader();
+reader.onload=function(e){
+currentCrewFile={name:file.name,type:file.type,size:file.size,data:e.target.result};
+document.getElementById('crew-file-name').textContent=`已选择：${file.name} (${(file.size/1024).toFixed(1)} KB)`;
+document.getElementById('crew-upload-text').textContent='更换船员名单';
+document.getElementById('crew-upload-area').classList.add('has-file');
+};
+reader.readAsDataURL(file);
+}
+
+function downloadCrewFile(shipId){const ship=ships.find(s=>s.id===shipId);if(!ship||!ship.crewFile)return;const a=document.createElement('a');a.href=ship.crewFile.data;a.download=ship.crewFile.name;a.click();}
+
+// ========== 录入/编辑船舶 ==========
+function addShip(e){
+e.preventDefault();
+const keyReasons=[];
+['key1','key2','key3','key4','key5'].forEach(id=>{if(document.getElementById(id).checked)keyReasons.push(KEY_REASONS[id]);});
+
+const crewChangeDate=document.getElementById('crew-change-date').value||null;
+const shipData={
+name:document.getElementById('ship-name').value.trim(),
+arrivalDate:document.getElementById('ship-date').value,
+arrivalTime:document.getElementById('ship-time').value,
+departureDate:document.getElementById('ship-departure-date').value||null,
+departureTime:document.getElementById('ship-departure-time').value||null,
+wharf:document.getElementById('ship-wharf').value,
+agent:document.getElementById('ship-agent').value.trim(),
+shipType:document.getElementById('ship-type').value,
+keyShip:keyReasons.length>0,
+keyShipReasons:keyReasons,
+remark:document.getElementById('ship-remark').value.trim(),
+crewFile:currentCrewFile,
+crewChangeDate:crewChangeDate
+};
+
+if(editingShipId){
+const idx=ships.findIndex(s=>s.id===editingShipId);
+if(idx>=0){ships[idx]={...ships[idx],...shipData,exempted:false};saveData();alert('✅ 船舶信息修改成功！');}
+}else{
+const needCheck=needsInspection({...shipData,exempted:false});
+if(!needCheck){
+const lastCheck=getLastCheckDate(shipData.name);
+const lastStr=lastCheck?`${lastCheck.getMonth()+1}月${lastCheck.getDate()}日`:'近期';
+if(!confirm(`该船于 ${lastStr} 已检查，距今不足90天且期间未更换船员，本次无需检查。
+
+是否保存到港记录（标记为无需检查）？`)){
+return;
+}
+const newShip={id:Date.now().toString(),...shipData,checked:false,checkTime:null,checker:null,exempted:true,createdAt:new Date().toISOString()};
+ships.push(newShip);saveData();
+alert('✅ 已保存到港记录（本次无需检查）');
+}else{
+const newShip={id:Date.now().toString(),...shipData,checked:false,checkTime:null,checker:null,exempted:false,createdAt:new Date().toISOString()};
+ships.push(newShip);saveData();
+alert('✅ 船舶录入成功！'+(newShip.keyShip?'【该船为重点必查船舶】':''));
+}
+}
+cancelEdit();showPanel('today');renderToday();renderAllShips();
+}
+
+function editShip(id){
+const ship=ships.find(s=>s.id===id);if(!ship)return;
+editingShipId=id;
+document.getElementById('edit-ship-id').value=id;
+document.getElementById('ship-name').value=ship.name;
+document.getElementById('ship-date').value=ship.arrivalDate;
+document.getElementById('ship-time').value=ship.arrivalTime;
+document.getElementById('ship-departure-date').value=ship.departureDate||'';
+document.getElementById('ship-departure-time').value=ship.departureTime||'';
+document.getElementById('ship-wharf').value=ship.wharf;
+document.getElementById('ship-agent').value=ship.agent;
+document.getElementById('ship-type').value=ship.shipType;
+document.getElementById('ship-remark').value=ship.remark||'';
+clearKeyCheckboxes();
+if(ship.keyShipReasons){
+const keyMap={'外国籍船舶':'key1','三个月内更换船员':'key2','本港准备更换船员':'key3','商渔船碰撞事故公司':'key4','未按沿海航路航行':'key5'};
+ship.keyShipReasons.forEach(r=>{const id=keyMap[r];if(id){document.getElementById(id).checked=true;updateCheckboxStyle(document.getElementById(id));if(id==='key2')toggleCrewChangeDate(document.getElementById(id));}});
+}
+if(ship.crewChangeDate){
+document.getElementById('crew-change-date').value=ship.crewChangeDate;
+}
+if(ship.crewFile){
+currentCrewFile=ship.crewFile;
+document.getElementById('crew-file-name').textContent=`已选择：${ship.crewFile.name}`;
+document.getElementById('crew-upload-text').textContent='更换船员名单';
+document.getElementById('crew-upload-area').classList.add('has-file');
+}else{
+currentCrewFile=null;
+document.getElementById('crew-file').value='';
+document.getElementById('crew-file-name').textContent='';
+document.getElementById('crew-upload-text').textContent='点击上传船员名单';
+document.getElementById('crew-upload-area').classList.remove('has-file');
+}
+document.getElementById('form-title').textContent='✏️ 编辑船舶信息';
+document.getElementById('submit-btn').textContent='💾 保存修改';
+checkShipHistory();
+document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+document.getElementById('panel-add').classList.add('active');
+document.querySelectorAll('.nav-tab')[2].classList.add('active');
+window.scrollTo(0,0);
+}
+
+function cancelEdit(){
+editingShipId=null;
+document.getElementById('ship-form').reset();
+document.getElementById('edit-ship-id').value='';
+document.getElementById('ship-date').value=new Date().toISOString().split('T')[0];
+document.getElementById('ship-time').value=new Date().toTimeString().slice(0,5);
+document.getElementById('crew-change-date').value='';
+document.getElementById('crew-change-date-group').style.display='none';
+clearKeyCheckboxes();
+currentCrewFile=null;
+document.getElementById('crew-file').value='';
+document.getElementById('crew-file-name').textContent='';
+document.getElementById('crew-upload-text').textContent='点击上传船员名单';
+document.getElementById('crew-upload-area').classList.remove('has-file');
+document.getElementById('history-hint').style.display='none';
+document.getElementById('history-hint').innerHTML='';
+document.getElementById('form-title').textContent='录入新到港船舶';
+document.getElementById('submit-btn').textContent='💾 保存并录入';
+}
+
+function checkShip(id){
+const ship=ships.find(s=>s.id===id);if(!ship)return;
+ship.checked=true;ship.exempted=false;
+ship.checkTime=new Date().toLocaleString('zh-CN');ship.checker='当前用户';
+
+// 同步到台账（锦丰处）
+const todayStr=new Date().toISOString().split('T')[0].replace(/-/g,'.');
+const month=todayStr.split('.')[1].replace(/^0/,'');
+const day=todayStr.split('.')[2].replace(/^0/,'');
+const checkDateStr=`${todayStr.split('.')[0]}.${month}.${day}`;
+
+if(!EXCEL_HISTORY[ship.name])EXCEL_HISTORY[ship.name]=[];
+// 避免同一天重复添加
+const alreadyExists=EXCEL_HISTORY[ship.name].some(r=>r.checkTime===checkDateStr&&r.source==='锦丰处');
+if(!alreadyExists){
+EXCEL_HISTORY[ship.name].push({
+checkTime:checkDateStr,source:'锦丰处',wharf:ship.wharf||'',shipType:'',imo:'',
+inspectors:'本系统登记',issues:'/',remark:ship.remark||''
+});
+EXCEL_HISTORY[ship.name].sort((a,b)=>a.checkTime.localeCompare(b.checkTime));
+saveHistoryData();
+}
+
+saveData();renderToday();renderAllShips();updateStats();
+}
+function uncheckShip(id){const ship=ships.find(s=>s.id===id);if(!ship)return;ship.checked=false;ship.checkTime=null;ship.checker=null;saveData();renderToday();renderAllShips();updateStats();}
+function deleteShip(id){showModal('确定要删除这条记录吗？此操作不可恢复。',()=>{ships=ships.filter(s=>s.id!==id);saveData();renderAllShips();renderToday();updateStats();closeModal();});}
+
+function exportData(){const dataStr=JSON.stringify(ships,null,2);const blob=new Blob([dataStr],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`船舶检查数据_${new Date().toISOString().split('T')[0]}.json`;a.click();URL.revokeObjectURL(url);}
+function importData(input){const file=input.files[0];if(!file)return;const reader=new FileReader();reader.onload=function(e){try{const data=JSON.parse(e.target.result);if(Array.isArray(data)){ships=data;saveData();renderToday();renderAllShips();alert('✅ 数据导入成功！');}else alert('❌ 数据格式错误');}catch(err){alert('❌ 文件解析失败');}};reader.readAsText(file);input.value='';}
+
+// ========== 台账管理（锦丰处） ==========
+let historyPage=1,historyPageSize=50,historyEditName=null,historyEditIndex=null;
+
+function renderHistoryPanel(){
+const search=document.getElementById('history-search').value.trim().toLowerCase();
+let allRecords=[];
+for(const shipName in EXCEL_HISTORY){
+EXCEL_HISTORY[shipName].forEach((r,idx)=>{
+allRecords.push({...r,_shipName:shipName,_index:idx});
+});
+}
+if(search)allRecords=allRecords.filter(r=>r._shipName.toLowerCase().includes(search));
+allRecords.sort((a,b)=>b.checkTime.localeCompare(a.checkTime));
+const total=allRecords.length;
+const totalPages=Math.ceil(total/historyPageSize)||1;
+if(historyPage>totalPages)historyPage=totalPages;
+const start=(historyPage-1)*historyPageSize;
+const pageRecords=allRecords.slice(start,start+historyPageSize);
+const tbody=document.getElementById('history-table-body');
+if(pageRecords.length===0){tbody.innerHTML='<tr><td colspan="6" style="text-align:center;color:#a0aec0;padding:40px;">暂无记录</td></tr>';}
+else{
+tbody.innerHTML=pageRecords.map(r=>`<tr><td><strong>${r._shipName}</strong></td><td>${r.checkTime}</td><td>${r.inspectors||'-'}</td><td>${r.issues&&r.issues!=='无'&&r.issues!=='/'?r.issues:'-'}</td><td>${r.remark||'-'}</td><td><button class="btn btn-edit btn-sm" onclick="editHistoryRecord('${r._shipName}',${r._index})">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteHistoryRecord('${r._shipName}',${r._index})">删除</button></td></tr>`).join('');
+}
+let pgHtml=`<button onclick="changeHistoryPage(-1)" ${historyPage<=1?'disabled':''}>上一页</button><span>第 ${historyPage} / ${totalPages} 页（共 ${total} 条）</span><button onclick="changeHistoryPage(1)" ${historyPage>=totalPages?'disabled':''}>下一页</button>`;
+document.getElementById('history-pagination').innerHTML=pgHtml;
+}
+
+function changeHistoryPage(delta){
+historyPage+=delta;
+if(historyPage<1)historyPage=1;
+renderHistoryPanel();
+}
+
+function deleteHistoryRecord(shipName,index){
+if(!confirm(`确定要删除 "${shipName}" 的这条台账记录吗？`))return;
+EXCEL_HISTORY[shipName].splice(index,1);
+if(EXCEL_HISTORY[shipName].length===0)delete EXCEL_HISTORY[shipName];
+saveHistoryData();
+renderHistoryPanel();
+renderAllShips();
+renderToday();
+}
+
+function editHistoryRecord(shipName,index){
+const r=EXCEL_HISTORY[shipName][index];
+historyEditName=shipName;historyEditIndex=index;
+const html=`<div class="form-grid" style="grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+<div class="form-group"><label>船名</label><input type="text" id="hist-name" value="${shipName}"></div>
+<div class="form-group"><label>检查日期</label><input type="text" id="hist-date" value="${r.checkTime}" placeholder="如 2026.8.14"></div>
+<div class="form-group"><label>检查人员</label><input type="text" id="hist-inspectors" value="${r.inspectors||''}"></div>
+<div class="form-group"><label>IMO号</label><input type="text" id="hist-imo" value="${r.imo||''}"></div>
+<div class="form-group" style="grid-column:1/-1"><label>存在问题</label><input type="text" id="hist-issues" value="${r.issues||''}"></div>
+<div class="form-group" style="grid-column:1/-1"><label>备注</label><input type="text" id="hist-remark" value="${r.remark||''}"></div>
+</div>`;
+showModalHtml('编辑台账记录',html,()=>{
+const newName=document.getElementById('hist-name').value.trim();
+const newDate=document.getElementById('hist-date').value.trim();
+if(!newName||!newDate){alert('船名和检查日期不能为空');return;}
+if(newName!==shipName){
+EXCEL_HISTORY[shipName].splice(index,1);
+if(EXCEL_HISTORY[shipName].length===0)delete EXCEL_HISTORY[shipName];
+if(!EXCEL_HISTORY[newName])EXCEL_HISTORY[newName]=[];
+EXCEL_HISTORY[newName].push({checkTime:newDate,source:'锦丰处',wharf:'',shipType:'',imo:document.getElementById('hist-imo').value,inspectors:document.getElementById('hist-inspectors').value,issues:document.getElementById('hist-issues').value,remark:document.getElementById('hist-remark').value});
+EXCEL_HISTORY[newName].sort((a,b)=>a.checkTime.localeCompare(b.checkTime));
+}else{
+EXCEL_HISTORY[shipName][index]={checkTime:newDate,source:'锦丰处',wharf:'',shipType:r.shipType||'',imo:document.getElementById('hist-imo').value,inspectors:document.getElementById('hist-inspectors').value,issues:document.getElementById('hist-issues').value,remark:document.getElementById('hist-remark').value};
+}
+saveHistoryData();
+renderHistoryPanel();
+renderAllShips();
+renderToday();
+closeModal();
+});
+}
+
+function showAddHistoryModal(){
+historyEditName=null;historyEditIndex=null;
+const html=`<div class="form-grid" style="grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+<div class="form-group"><label>船名 *</label><input type="text" id="hist-name" placeholder="请输入船名"></div>
+<div class="form-group"><label>检查日期 *</label><input type="text" id="hist-date" placeholder="如 2026.8.14"></div>
+<div class="form-group"><label>检查人员</label><input type="text" id="hist-inspectors" placeholder=""></div>
+<div class="form-group"><label>IMO号</label><input type="text" id="hist-imo" placeholder=""></div>
+<div class="form-group" style="grid-column:1/-1"><label>存在问题</label><input type="text" id="hist-issues" placeholder="无 / 具体问题描述"></div>
+<div class="form-group" style="grid-column:1/-1"><label>备注</label><input type="text" id="hist-remark" placeholder=""></div>
+</div>`;
+showModalHtml('添加台账记录',html,()=>{
+const newName=document.getElementById('hist-name').value.trim();
+const newDate=document.getElementById('hist-date').value.trim();
+if(!newName||!newDate){alert('船名和检查日期不能为空');return;}
+if(!EXCEL_HISTORY[newName])EXCEL_HISTORY[newName]=[];
+EXCEL_HISTORY[newName].push({checkTime:newDate,source:'锦丰处',wharf:'',shipType:'',imo:document.getElementById('hist-imo').value,inspectors:document.getElementById('hist-inspectors').value,issues:document.getElementById('hist-issues').value,remark:document.getElementById('hist-remark').value});
+EXCEL_HISTORY[newName].sort((a,b)=>a.checkTime.localeCompare(b.checkTime));
+saveHistoryData();
+renderHistoryPanel();
+renderAllShips();
+renderToday();
+closeModal();
+});
+}
+
+// ========== Excel台账上传替换 ==========
+// 点击上传区域触发文件选择
+document.getElementById('excel-upload-area').addEventListener('click',function(e){
+if(e.target.tagName!=='INPUT')document.getElementById('excel-upload').click();
+});
+
+function handleExcelUpload(input){
+const file=input.files[0];
+if(!file)return;
+parseExcelFile(file);
+input.value='';
+}
+
+function handleExcelDrop(e){
+e.preventDefault();
+e.stopPropagation();
+document.getElementById('excel-upload-area').classList.remove('dragover');
+const files=e.dataTransfer.files;
+if(files.length>0)parseExcelFile(files[0]);
+}
+
+function parseExcelFile(file){
+if(!file.name.endsWith('.xlsx')){alert('❌ 请上传 .xlsx 格式的Excel文件');return;}
+
+const reader=new FileReader();
+reader.onload=function(e){
+try{
+const data=new Uint8Array(e.target.result);
+// 使用简单的XLSX解析（基于zip和XML）
+parseXLSXData(data);
+}catch(err){alert('❌ 文件解析失败：'+err.message);}
+};
+reader.readAsArrayBuffer(file);
+}
+
+// 简化的XLSX解析器（浏览器端）
+function parseXLSXData(arrayBuffer){
+// 使用JSZip解析
+const zip=new JSZip();
+zip.loadAsync(arrayBuffer).then(function(zipContent){
+// 读取sharedStrings
+let sharedStrings=[];
+const ssFile=zipContent.file('xl/sharedStrings.xml');
+if(ssFile){
+return ssFile.async('string').then(function(ssXml){
+const parser=new DOMParser();
+const ssDoc=parser.parseFromString(ssXml,'application/xml');
+const siList=ssDoc.getElementsByTagName('si');
+for(let i=0;i<siList.length;i++){
+let text='';
+const tList=siList[i].getElementsByTagName('t');
+for(let j=0;j<tList.length;j++){if(tList[j].textContent)text+=tList[j].textContent;}
+sharedStrings.push(text);
+}
+return sharedStrings;
+});
+}
+return Promise.resolve(sharedStrings);
+}).then(function(sharedStrings){
+// 读取worksheet
+const sheetFile=zipContent.file('xl/worksheets/sheet1.xml')||zipContent.file('xl/worksheets/sheet2.xml');
+if(!sheetFile){alert('❌ 无法找到工作表');return;}
+return sheetFile.async('string').then(function(sheetXml){
+return {sharedStrings:sharedStrings,sheetXml:sheetXml};
+});
+}).then(function(result){
+const parser=new DOMParser();
+const sheetDoc=parser.parseFromString(result.sheetXml,'application/xml');
+const rows=sheetDoc.getElementsByTagName('row');
+
+const newRecords=[];
+for(let i=0;i<rows.length;i++){
+const row=rows[i];
+const rowIdx=parseInt(row.getAttribute('r')||'0');
+if(rowIdx<=2)continue; // 跳过标题行
+
+const cells=row.getElementsByTagName('c');
+let checkTime='',shipName='',inspectors='',issues='',remark='',imo='';
+
+for(let j=0;j<cells.length;j++){
+const cell=cells[j];
+const cellRef=cell.getAttribute('r')||'';
+const col=cellRef.replace(/\d+/g,'');
+const cellType=cell.getAttribute('t')||'';
+const vElem=cell.getElementsByTagName('v')[0];
+let val=vElem?vElem.textContent:'';
+
+if(cellType==='s'&&val){
+const idx=parseInt(val);
+if(idx>=0&&idx<result.sharedStrings.length)val=result.sharedStrings[idx];
+}
+
+// 锦丰处格式：B=检查日期, C=船名, D=船舶情况, E=IMO, F=检查人员, G=存在问题, H=备注
+if(col==='B')checkTime=val.trim();
+if(col==='C')shipName=val.trim();
+if(col==='F')inspectors=val.trim();
+if(col==='G')issues=val.trim();
+if(col==='H')remark=val.trim();
+if(col==='E')imo=val.trim();
+}
+
+if(shipName&&checkTime&&shipName!=='检查时间'&&!shipName.includes('示例')){
+newRecords.push({shipName:shipName,checkTime:checkTime,source:'锦丰处',wharf:'',shipType:'',imo:imo,inspectors:inspectors,issues:issues,remark:remark});
+}
+}
+
+if(newRecords.length===0){alert('❌ 未解析到有效记录，请确认Excel格式正确');return;}
+
+// 构建新的历史数据
+const newHistory={};
+newRecords.forEach(r=>{
+if(!newHistory[r.shipName])newHistory[r.shipName]=[];
+newHistory[r.shipName].push(r);
+});
+for(const name in newHistory){newHistory[name].sort((a,b)=>a.checkTime.localeCompare(b.checkTime));}
+
+// 确认替换
+if(confirm(`成功解析 ${newRecords.length} 条记录，涉及 ${Object.keys(newHistory).length} 艘船。\n\n确定要用新数据替换现有锦丰处台账吗？`)){
+EXCEL_HISTORY=newHistory;
+saveHistoryData();
+renderHistoryPanel();
+renderAllShips();
+renderToday();
+alert('✅ 台账数据已更新！');
+}
+}).catch(function(err){alert('❌ 解析错误：'+err.message);});
+}
+
+// 加载JSZip库（CDN）
+function loadJSZip(){
+if(typeof JSZip!=='undefined')return Promise.resolve();
+return new Promise(function(resolve,reject){
+const script=document.createElement('script');
+script.src='https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+script.onload=resolve;
+script.onerror=reject;
+document.head.appendChild(script);
+});
+}
+loadJSZip().then(function(){console.log('JSZip loaded');}).catch(function(){console.error('JSZip load failed');});
+
+function showModalHtml(title,htmlContent,onConfirm){
+document.getElementById('modal-title').textContent=title;
+document.getElementById('modal-body').innerHTML=htmlContent;
+document.getElementById('modal-confirm').onclick=onConfirm;
+document.getElementById('modal-content').classList.add('wide');
+document.getElementById('modal').classList.add('active');
+}
+
+function showModal(text,onConfirm){
+document.getElementById('modal-title').textContent='确认操作';
+document.getElementById('modal-body').innerHTML=`<p id="modal-text">${text}</p>`;
+document.getElementById('modal-confirm').onclick=onConfirm;
+document.getElementById('modal-content').classList.remove('wide');
+document.getElementById('modal').classList.add('active');
+}
+
+function closeModal(){
+document.getElementById('modal').classList.remove('active');
+document.getElementById('modal-content').classList.remove('wide');
+}
+
+function formatDate(date){const d=new Date(date);return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日`;}
+
+init();
+</script>
+</body>
+</html>
